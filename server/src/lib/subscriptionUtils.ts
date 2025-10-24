@@ -51,7 +51,7 @@ export async function getOrganizationSubscriptionInfo(organizationId: string): P
   }
 
   const [org] = await db
-    .select({ name: organization.name })
+    .select({ id: organization.id })
     .from(organization)
     .where(eq(organization.id, organizationId))
     .limit(1);
