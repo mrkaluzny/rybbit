@@ -6,10 +6,6 @@ import { DateTime } from "luxon";
 export type SelectImportStatus = typeof importStatus.$inferSelect;
 export type InsertImportStatus = typeof importStatus.$inferInsert;
 
-export async function createImportStatus(data: InsertImportStatus): Promise<void> {
-  await db.insert(importStatus).values(data);
-}
-
 export async function updateImportStatus(
   importId: string,
   status: InsertImportStatus["status"],
