@@ -9,7 +9,7 @@ const deleteImportRequestSchema = z
   .object({
     params: z.object({
       site: z.string().min(1),
-      importId: z.string().min(1),
+      importId: z.string().uuid(),
     }),
   })
   .strict();
