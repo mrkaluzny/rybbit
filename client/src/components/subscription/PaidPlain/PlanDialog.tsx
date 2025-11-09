@@ -173,7 +173,7 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
               { type: "pro" as const, title: "Pro", subtitle: "Advanced features + session replays" },
             ].map(({ type, title, subtitle }) => (
               <div key={type} className="space-y-3">
-                <div className="text-center mb-4">
+                <div className="mb-4">
                   <h3 className="text-xl font-bold">{title}</h3>
                   <p className="text-sm text-neutral-400">{subtitle}</p>
                 </div>
@@ -196,18 +196,17 @@ export function PlanDialog({ open, onOpenChange, currentPlanName, hasActiveSubsc
                         )}
                         onClick={() => handlePlanSelection(plan.priceId, plan.name)}
                       >
-                        <div className="flex items-center justify-between w-full">
-                          <Badge variant="success">{type === "pro" ? "Pro" : "Standard"}</Badge>
+                        <div className="flex justify-between w-full">
+                          <div className="text-neutral-100 font-medium flex-end">
+                            {tier.shortName} events{" "}
+                            <span className="text-neutral-400 text-xs font-normal">/ month</span>
+                          </div>
                           <div className="text-xs text-neutral-400">
                             <span className="text-neutral-200 font-semibold text-base">
                               ${isAnnual ? Math.round(plan.price / 12) : plan.price}
                             </span>{" "}
-                            / month
+                            /month
                           </div>
-                        </div>
-                        <div className="text-neutral-100 font-medium flex items-center gap-2">
-                          {tier.shortName} events <span className="text-neutral-400 text-xs font-normal">/ month</span>
-                          {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                         </div>
                       </div>
                     );
