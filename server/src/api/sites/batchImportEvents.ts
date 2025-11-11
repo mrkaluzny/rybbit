@@ -96,15 +96,14 @@ export async function batchImportEvents(request: FastifyRequest<BatchImportReque
     try {
       const quotaTracker = await ImportQuotaTracker.create(siteRecord.organizationId);
 
-      const eventsWithinQuota: UmamiEvent[] = [];
+      const transformedEvents = UmamiImportMapper.transform(events, site, importId);
+      const invalidEventCount = events.length - transformedEvents.length;
+
+      const eventsWithinQuota = [];
       let skippedDueToQuota = 0;
 
-      for (const event of events) {
-        if (!event.created_at) {
-          continue;
-        }
-
-        if (quotaTracker.canImportEvent(event.created_at)) {
+      for (const event of transformedEvents) {
+        if (quotaTracker.canImportEvent(event.timestamp)) {
           eventsWithinQuota.push(event);
         } else {
           skippedDueToQuota++;
@@ -113,9 +112,13 @@ export async function batchImportEvents(request: FastifyRequest<BatchImportReque
 
       if (eventsWithinQuota.length === 0) {
         const quotaSummary = quotaTracker.getSummary();
-        const quotaMessage =
+        let quotaMessage =
           `All ${events.length} events exceeded monthly quotas or fell outside the ${quotaSummary.totalMonthsInWindow}-month historical window. ` +
           `${quotaSummary.monthsAtCapacity} of ${quotaSummary.totalMonthsInWindow} months are at full capacity.`;
+
+        if (invalidEventCount > 0) {
+          quotaMessage += ` ${invalidEventCount} events were invalid.`;
+        }
 
         if (isLastBatch) {
           await updateImportStatus(importId, "completed", quotaMessage);
@@ -127,29 +130,30 @@ export async function batchImportEvents(request: FastifyRequest<BatchImportReque
         });
       }
 
-      const transformedEvents = UmamiImportMapper.transform(eventsWithinQuota, site, importId);
-
-      if (transformedEvents.length === 0) {
-        if (isLastBatch) {
-          await updateImportStatus(importId, "completed", "No valid events found in the final batch");
-        }
-
-        return reply.send({});
-      }
-
       await clickhouse.insert({
         table: "events",
-        values: transformedEvents,
+        values: eventsWithinQuota,
         format: "JSONEachRow",
       });
 
-      await updateImportProgress(importId, transformedEvents.length);
+      await updateImportProgress(importId, eventsWithinQuota.length);
 
       if (isLastBatch) {
-        const finalMessage =
-          skippedDueToQuota > 0
-            ? `Import completed. ${skippedDueToQuota} events were skipped due to quota limits.`
-            : undefined;
+        let finalMessage: string | undefined = undefined;
+        const messages: string[] = [];
+
+        if (skippedDueToQuota > 0) {
+          messages.push(`${skippedDueToQuota} events were skipped due to quota limits`);
+        }
+
+        if (invalidEventCount > 0) {
+          messages.push(`${invalidEventCount} events were invalid`);
+        }
+
+        if (messages.length > 0) {
+          finalMessage = `Import completed. ${messages.join("; ")}.`;
+        }
+
         await updateImportStatus(importId, "completed", finalMessage);
       }
 
