@@ -5,10 +5,11 @@ import { APIResponse } from "@/api/types";
 interface GetSiteImportsResponse {
   importId: string;
   platform: "umami" | null;
-  status: "pending" | "processing" | "completed" | "failed";
   importedEvents: number;
-  errorMessage: string | null;
+  skippedEvents: number;
+  invalidEvents: number;
   startedAt: string;
+  completedAt: string | null;
 }
 
 interface CreateSiteImportResponse {
@@ -28,9 +29,8 @@ export function useGetSiteImports(site: number) {
     queryKey: ["get-site-imports", site],
     queryFn: async () => await authedFetch<APIResponse<GetSiteImportsResponse[]>>(`/get-site-imports/${site}`),
     refetchInterval: data => {
-      const hasActiveImports = data.state.data?.data.some(
-        imp => imp.status === "processing" || imp.status === "pending"
-      );
+      // Check if there are any imports that haven't completed yet (completedAt is null)
+      const hasActiveImports = data.state.data?.data.some(imp => imp.completedAt === null);
       return hasActiveImports ? 5000 : false;
     },
     placeholderData: { data: [] },

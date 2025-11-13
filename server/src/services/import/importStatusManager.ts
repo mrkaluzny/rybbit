@@ -6,21 +6,27 @@ import { DateTime } from "luxon";
 export type SelectImportStatus = typeof importStatus.$inferSelect;
 export type InsertImportStatus = typeof importStatus.$inferInsert;
 
-export async function updateImportStatus(
+export async function updateImportProgress(
   importId: string,
-  status: InsertImportStatus["status"],
-  errorMessage?: string
+  importedEvents: number,
+  skippedEvents: number,
+  invalidEvents: number
 ): Promise<void> {
-  const completedAt = status === "completed" || status === "failed" ? DateTime.utc().toISO() : null;
-
-  await db.update(importStatus).set({ status, errorMessage, completedAt }).where(eq(importStatus.importId, importId));
-}
-
-export async function updateImportProgress(importId: string, importedEvents: number): Promise<void> {
   await db
     .update(importStatus)
     .set({
       importedEvents: sql`${importStatus.importedEvents} + ${importedEvents}`,
+      skippedEvents: sql`${importStatus.skippedEvents} + ${skippedEvents}`,
+      invalidEvents: sql`${importStatus.invalidEvents} + ${invalidEvents}`,
+    })
+    .where(eq(importStatus.importId, importId));
+}
+
+export async function completeImport(importId: string): Promise<void> {
+  await db
+    .update(importStatus)
+    .set({
+      completedAt: DateTime.utc().toISO(),
     })
     .where(eq(importStatus.importId, importId));
 }

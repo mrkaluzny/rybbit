@@ -147,38 +147,19 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
     }
   };
 
-  const getStatusInfo = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "completed":
-        return {
-          color: "bg-green-100 text-green-800 border-green-200",
-          icon: CheckCircle2,
-          label: "Completed",
-        };
-      case "failed":
-        return {
-          color: "bg-red-100 text-red-800 border-red-200",
-          icon: AlertCircle,
-          label: "Failed",
-        };
-      case "processing":
-        return {
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-          icon: Loader2,
-          label: "Processing",
-        };
-      case "pending":
-        return {
-          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-          icon: Clock,
-          label: "Pending",
-        };
-      default:
-        return {
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-          icon: Clock,
-          label: status,
-        };
+  const getStatusInfo = (completedAt: string | null) => {
+    if (completedAt === null) {
+      return {
+        color: "bg-blue-100 text-blue-800 border-blue-200",
+        icon: Loader2,
+        label: "In Progress",
+      };
+    } else {
+      return {
+        color: "bg-green-100 text-green-800 border-green-200",
+        icon: CheckCircle2,
+        label: "Completed",
+      };
     }
   };
 
@@ -195,8 +176,7 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
   }, [data?.data]);
 
   // Check if there's an active import (cloud only)
-  const hasActiveImport =
-    IS_CLOUD && sortedImports.some(imp => imp.status === "pending" || imp.status === "processing");
+  const hasActiveImport = IS_CLOUD && sortedImports.some(imp => imp.completedAt === null);
 
   const isImportDisabled =
     !selectedFile || !!fileError || createImportMutation.isPending || disabled || hasActiveImport;
@@ -340,13 +320,15 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
                     <TableHead>Started At</TableHead>
                     <TableHead>Platform</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Events</TableHead>
+                    <TableHead className="text-right">Imported</TableHead>
+                    <TableHead className="text-right">Skipped</TableHead>
+                    <TableHead className="text-right">Invalid</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedImports.map(imp => {
-                    const statusInfo = getStatusInfo(imp.status);
+                    const statusInfo = getStatusInfo(imp.completedAt);
                     const StatusIcon = statusInfo.icon;
                     const startedAt = DateTime.fromISO(imp.startedAt).toFormat("MMM dd, yyyy HH:mm");
 
@@ -359,30 +341,48 @@ export function ImportManager({ siteId, disabled }: ImportManagerProps) {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge className={`${statusInfo.color} flex items-center gap-1`}>
-                              <StatusIcon className={`h-3 w-3 ${imp.status === "processing" ? "animate-spin" : ""}`} />
-                              {statusInfo.label}
-                            </Badge>
-                            {imp.errorMessage && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="text-red-600 hover:text-red-700">
-                                      <Info className="h-4 w-4" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="right" className="max-w-sm">
-                                    <p className="text-sm">{imp.errorMessage}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
+                          <Badge className={`${statusInfo.color} flex items-center gap-1`}>
+                            <StatusIcon className={`h-3 w-3 ${imp.completedAt === null ? "animate-spin" : ""}`} />
+                            {statusInfo.label}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">{imp.importedEvents.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                          {(imp.status === "completed" || imp.status === "failed") && (
+                          {imp.skippedEvents > 0 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-yellow-600 cursor-help">
+                                    {imp.skippedEvents.toLocaleString()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Events exceeded quota or date range limits</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {imp.invalidEvents > 0 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-red-600 cursor-help">{imp.invalidEvents.toLocaleString()}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Events failed validation</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {imp.completedAt !== null && (
                             <Button
                               variant="outline"
                               size="sm"

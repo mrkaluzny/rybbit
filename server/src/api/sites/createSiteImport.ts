@@ -1,9 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { getUserHasAdminAccessToSite } from "../../lib/auth-utils.js";
-import { ImportLimiter } from "../../services/import/importLimiter.js";
-import { ImportQuotaTracker } from "../../services/import/importQuotaChecker.js";
+import { importQuotaManager } from "../../services/import/importQuotaManager.js";
 import { DateTime } from "luxon";
 import { z } from "zod";
+import { db } from "../../db/postgres/postgres.js";
+import { sites, importStatus } from "../../db/postgres/schema.js";
+import { eq } from "drizzle-orm";
 
 const createSiteImportRequestSchema = z
   .object({
@@ -35,26 +37,26 @@ export async function createSiteImport(request: FastifyRequest<CreateSiteImportR
       return reply.status(403).send({ error: "Forbidden" });
     }
 
-    // Check organization and get initial limit check
-    const concurrentImportLimitResult = await ImportLimiter.checkConcurrentImportLimit(siteId);
-    if (!concurrentImportLimitResult.allowed) {
-      return reply.status(429).send({ error: concurrentImportLimitResult.reason });
+    // Get site's organization
+    const [siteRecord] = await db
+      .select({ organizationId: sites.organizationId })
+      .from(sites)
+      .where(eq(sites.siteId, siteId))
+      .limit(1);
+
+    if (!siteRecord) {
+      return reply.status(404).send({ error: "Site not found" });
     }
 
-    const organization = concurrentImportLimitResult.organizationId;
+    const organizationId = siteRecord.organizationId;
 
-    // Atomically create import status with concurrency check to prevent race conditions
-    const importResult = await ImportLimiter.createImportWithConcurrencyCheck({
-      siteId,
-      organizationId: organization,
-    });
-
-    if (!importResult.success) {
-      return reply.status(429).send({ error: importResult.reason });
+    // Check concurrent import limit using singleton
+    if (!importQuotaManager.canStartImport(organizationId)) {
+      return reply.status(429).send({ error: "Only 1 concurrent import allowed per organization" });
     }
 
-    // Get quota information to determine allowed date ranges
-    const quotaTracker = await ImportQuotaTracker.create(organization);
+    // Get quota information from cached tracker
+    const quotaTracker = await importQuotaManager.getTracker(organizationId);
     const summary = quotaTracker.getSummary();
 
     // Calculate the earliest and latest allowed dates
@@ -62,9 +64,21 @@ export async function createSiteImport(request: FastifyRequest<CreateSiteImportR
     const earliestAllowedDate = oldestAllowedDate.toFormat("yyyy-MM-dd");
     const latestAllowedDate = DateTime.utc().toFormat("yyyy-MM-dd");
 
+    // Create import record
+    const [importRecord] = await db
+      .insert(importStatus)
+      .values({
+        siteId,
+        organizationId,
+      })
+      .returning({ importId: importStatus.importId });
+
+    // Register import with quota manager
+    importQuotaManager.registerImport(organizationId, importRecord.importId);
+
     return reply.send({
       data: {
-        importId: importResult.importId,
+        importId: importRecord.importId,
         allowedDateRange: {
           earliestAllowedDate,
           latestAllowedDate,

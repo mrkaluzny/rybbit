@@ -26,9 +26,14 @@ interface UmamiEvent {
 }
 
 
+export interface ImportProgress {
+  importedEvents: number;
+  skippedEvents: number;
+  invalidEvents: number;
+}
+
 export class CsvParser {
   private aborted = false;
-  private quotaExceeded = false;
   private siteId: number = 0;
   private importId: string = "";
 
@@ -39,15 +44,25 @@ export class CsvParser {
   private isProcessing = false;
   private parsingComplete = false;
 
+  // Track cumulative counts
+  private totalImported = 0;
+  private totalSkipped = 0;
+  private totalInvalid = 0;
+
+  // Callback for progress updates
+  private onProgress?: (progress: ImportProgress) => void;
+
   startImport(
     file: File,
     siteId: number,
     importId: string,
     earliestAllowedDate: string,
-    latestAllowedDate: string
+    latestAllowedDate: string,
+    onProgress?: (progress: ImportProgress) => void
   ): void {
     this.siteId = siteId;
     this.importId = importId;
+    this.onProgress = onProgress;
 
     this.earliestAllowedDate = DateTime.fromFormat(earliestAllowedDate, "yyyy-MM-dd", { zone: "utc" }).startOf("day");
     this.latestAllowedDate = DateTime.fromFormat(latestAllowedDate, "yyyy-MM-dd", { zone: "utc" }).endOf("day");
@@ -68,7 +83,7 @@ export class CsvParser {
       worker: true,
       chunkSize: 9 * 1024 * 1024,
       chunk: (results, parser) => {
-        if (this.aborted || this.quotaExceeded) {
+        if (this.aborted) {
           parser.abort();
           return;
         }
@@ -102,7 +117,7 @@ export class CsvParser {
     this.isProcessing = true;
 
     while (this.uploadQueue.length > 0) {
-      if (this.aborted || this.quotaExceeded) {
+      if (this.aborted) {
         this.uploadQueue = [];
         break;
       }
@@ -169,10 +184,6 @@ export class CsvParser {
   }
 
   private async uploadChunk(events: UmamiEvent[], isLastBatch: boolean): Promise<void> {
-    if (this.quotaExceeded) {
-      return;
-    }
-
     // Skip empty chunks unless it's the last one (needed for finalization)
     if (events.length === 0 && !isLastBatch) {
       return;
@@ -180,8 +191,9 @@ export class CsvParser {
 
     try {
       const data = await authedFetch<{
-        quotaExceeded?: boolean;
-        message?: string;
+        imported: number;
+        skipped: number;
+        invalid: number;
       }>(`/api/batch-import-events/${this.siteId}/${this.importId}`, undefined, {
         method: "POST",
         data: {
@@ -190,12 +202,21 @@ export class CsvParser {
         },
       });
 
-      if (data.quotaExceeded) {
-        this.quotaExceeded = true;
-        this.aborted = true;
-        return;
+      // Update cumulative counts
+      this.totalImported += data.imported;
+      this.totalSkipped += data.skipped;
+      this.totalInvalid += data.invalid;
+
+      // Notify progress callback if provided
+      if (this.onProgress) {
+        this.onProgress({
+          importedEvents: this.totalImported,
+          skippedEvents: this.totalSkipped,
+          invalidEvents: this.totalInvalid,
+        });
       }
     } catch (error) {
+      console.error("Error uploading chunk:", error);
       this.aborted = true;
       return;
     }

@@ -624,8 +624,6 @@ export const gscConnections = pgTable("gsc_connections", {
 
 export const importPlatformEnum = pgEnum("import_platform_enum", ["umami"]);
 
-export const importStatusEnum = pgEnum("import_status_enum", ["pending", "processing", "completed", "failed"]);
-
 export const importStatus = pgTable(
   "import_status",
   {
@@ -633,9 +631,9 @@ export const importStatus = pgTable(
     siteId: integer("site_id").notNull(),
     organizationId: text("organization_id").notNull(),
     platform: importPlatformEnum("platform"),
-    status: importStatusEnum("status").notNull().default("pending"),
     importedEvents: integer("imported_events").notNull().default(0),
-    errorMessage: text("error_message"),
+    skippedEvents: integer("skipped_events").notNull().default(0),
+    invalidEvents: integer("invalid_events").notNull().default(0),
     startedAt: timestamp("started_at", { mode: "string" }).notNull().defaultNow(),
     completedAt: timestamp("completed_at", { mode: "string" }),
   },
