@@ -99,7 +99,7 @@ function SidebarLink({
         className={cn(
           "p-1 rounded-md transition-all duration-200 flex items-center gap-2",
           active
-            ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+            ? "bg-neutral-150 dark:bg-neutral-800 text-neutral-800 dark:text-white"
             : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-150 dark:hover:bg-neutral-800/80"
           // expanded ? "w-40" : "w-12"
         )}

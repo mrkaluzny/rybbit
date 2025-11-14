@@ -62,8 +62,8 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
                   onSiteSelect(); // Close popover immediately
                 }}
                 className={cn(
-                  "flex items-center justify-between p-2 cursor-pointer hover:bg-neutral-150 dark:hover:bg-neutral-800/50 transition-colors rounded-md border-b border-neutral-300 dark:border-neutral-800 last:border-b-0",
-                  isSelected && "bg-neutral-200 dark:bg-neutral-800"
+                  "flex items-center justify-between p-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors rounded-md border-b border-neutral-300 dark:border-neutral-800 last:border-b-0",
+                  isSelected && "bg-neutral-50 dark:bg-neutral-800"
                 )}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -106,8 +106,8 @@ function SiteSelectorContent({ onSiteSelect }: { onSiteSelect: () => void }) {
                     onSiteSelect(); // Close popover immediately
                   }}
                   className={cn(
-                    "flex items-center justify-between p-2 cursor-pointer hover:bg-neutral-150 dark:hover:bg-neutral-800/50 transition-colors rounded-md border-b border-neutral-100 dark:border-neutral-800 last:border-b-0",
-                    isSelected && "bg-neutral-100 dark:bg-neutral-800"
+                    "flex items-center justify-between p-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors rounded-md border-b border-neutral-100 dark:border-neutral-800 last:border-b-0",
+                    isSelected && "bg-neutral-50 dark:bg-neutral-800"
                   )}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
