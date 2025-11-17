@@ -22,7 +22,7 @@ function AuthComponent() {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("signup");
 
   // Construct callback URL to return to this page after OAuth
-  const callbackURL = `/invitation?${searchParams.toString()}`;
+  const callbackURL = `/invitation?organization=${organization}&inviterEmail=${inviterEmail}`;
 
   return (
     <Card className="w-full max-w-md p-1">
