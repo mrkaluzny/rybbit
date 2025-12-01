@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 const createSiteImportRequestSchema = z
   .object({
     params: z.object({
-      site: z.string().min(1),
+      site: z.coerce.number().int(),
     }),
     body: z.object({
       platform: z.enum(importPlatforms),
@@ -37,7 +37,6 @@ export async function createSiteImport(request: FastifyRequest<CreateSiteImportR
 
     const { site } = parsed.data.params;
     const { platform } = parsed.data.body;
-    const siteId = Number(site);
 
     const userHasAccess = await getUserHasAdminAccessToSite(request, site);
     if (!userHasAccess) {
@@ -47,7 +46,7 @@ export async function createSiteImport(request: FastifyRequest<CreateSiteImportR
     const [siteRecord] = await db
       .select({ organizationId: sites.organizationId })
       .from(sites)
-      .where(eq(sites.siteId, siteId))
+      .where(eq(sites.siteId, site))
       .limit(1);
 
     if (!siteRecord || !siteRecord.organizationId) {
@@ -70,7 +69,7 @@ export async function createSiteImport(request: FastifyRequest<CreateSiteImportR
       const latestAllowedDate = DateTime.utc().toFormat("yyyy-MM-dd");
 
       const importRecord = await createImport({
-        siteId,
+        siteId: site,
         organizationId,
         platform,
       });

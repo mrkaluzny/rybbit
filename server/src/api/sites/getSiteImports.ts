@@ -6,7 +6,7 @@ import { z } from "zod";
 const getSiteImportsRequestSchema = z
   .object({
     params: z.object({
-      site: z.string().min(1),
+      site: z.coerce.number().int(),
     }),
   })
   .strict();
@@ -26,14 +26,13 @@ export async function getSiteImports(request: FastifyRequest<GetSiteImportsReque
     }
 
     const { site } = parsed.data.params;
-    const siteId = Number(site);
 
     const userHasAccess = await getUserHasAdminAccessToSite(request, site);
     if (!userHasAccess) {
       return reply.status(403).send({ error: "Forbidden" });
     }
 
-    const imports = await getImportsForSite(siteId);
+    const imports = await getImportsForSite(site);
 
     return reply.send({
       data: imports.map(

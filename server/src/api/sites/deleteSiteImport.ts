@@ -8,7 +8,7 @@ import { importQuotaManager } from "../../services/import/importQuotaManager.js"
 const deleteImportRequestSchema = z
   .object({
     params: z.object({
-      site: z.string().min(1),
+      site: z.coerce.number().int(),
       importId: z.string().uuid(),
     }),
   })
@@ -40,7 +40,7 @@ export async function deleteSiteImport(request: FastifyRequest<DeleteImportReque
       return reply.status(404).send({ error: "Import not found" });
     }
 
-    if (importRecord.siteId !== Number(site)) {
+    if (importRecord.siteId !== site) {
       return reply.status(403).send({ error: "Import does not belong to this site" });
     }
 
@@ -48,14 +48,12 @@ export async function deleteSiteImport(request: FastifyRequest<DeleteImportReque
       return reply.status(400).send({ error: "Cannot delete active import" });
     }
 
-    const siteId = Number(site);
-
     try {
       await clickhouse.command({
         query: "DELETE FROM events WHERE import_id = {importId:UUID} AND site_id = {siteId:UInt16}",
         query_params: {
           importId: importId,
-          siteId: siteId,
+          siteId: site,
         },
       });
     } catch (chError) {
