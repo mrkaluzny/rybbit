@@ -79,7 +79,7 @@ export const sites = pgTable("sites", {
   trackInitialPageView: boolean().default(true),
   trackSpaNavigation: boolean().default(true),
   trackIp: boolean().default(false),
-  apiKey: text("api_key"), // Format: rb_{32_hex_chars} = 35 chars total
+  apiKey: text("api_key"), // Format: rb_{64_hex_chars} = 67 chars total
   privateLinkKey: text("private_link_key"),
 });
 
