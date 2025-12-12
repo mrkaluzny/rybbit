@@ -59,7 +59,7 @@ export const trackingPayloadSchema = z.discriminatedUnion("type", [
         )
         .optional(), // Optional but must be valid JSON if present
       user_id: z.string().max(255).optional(),
-      api_key: z.string().regex(/^rb_[0-9a-f]{64}$/i).optional(), // rb_ prefix + 64 hex chars
+      api_key: z.string().max(67).optional(), // rb_ prefix + 64 hex chars
       ip_address: z.string().ip().optional(), // Custom IP for geolocation
       user_agent: z.string().max(512).optional(), // Custom user agent
     })
@@ -79,7 +79,7 @@ export const trackingPayloadSchema = z.discriminatedUnion("type", [
       event_name: z.string().max(256).optional(),
       properties: z.string().max(2048).optional(),
       user_id: z.string().max(255).optional(),
-      api_key: z.string().regex(/^rb_[0-9a-f]{64}$/i).optional(), // rb_ prefix + 64 hex chars
+      api_key: z.string().max(67).optional(), // rb_ prefix + 64 hex chars
       ip_address: z.string().ip().optional(), // Custom IP for geolocation
       user_agent: z.string().max(512).optional(), // Custom user agent
       // Performance metrics (can be null if not collected)
@@ -132,7 +132,7 @@ export const trackingPayloadSchema = z.discriminatedUnion("type", [
           }
         ),
       user_id: z.string().max(255).optional(),
-      api_key: z.string().regex(/^rb_[0-9a-f]{64}$/i).optional(), // rb_ prefix + 64 hex chars
+      api_key: z.string().max(67).optional(), // rb_ prefix + 64 hex chars
       ip_address: z.string().ip().optional(), // Custom IP for geolocation
       user_agent: z.string().max(512).optional(), // Custom user agent
     })
@@ -187,7 +187,7 @@ export const trackingPayloadSchema = z.discriminatedUnion("type", [
           }
         ),
       user_id: z.string().max(255).optional(),
-      api_key: z.string().regex(/^rb_[0-9a-f]{64}$/i).optional(), // rb_ prefix + 64 hex chars
+      api_key: z.string().max(67).optional(), // rb_ prefix + 64 hex chars
       ip_address: z.string().ip().optional(), // Custom IP for geolocation
       user_agent: z.string().max(512).optional(), // Custom user agent
     })
